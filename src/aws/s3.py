@@ -8,7 +8,6 @@ from botocore.exceptions import ClientError
 # Create Logger
 logger = logging.getLogger(__name__)
 
-
 class S3Buckets:
     @classmethod
     def credentials(cls, region=None):
@@ -25,6 +24,7 @@ class S3Buckets:
         load_dotenv()
         secret = os.getenv("ACCESS_SECRET")
         access = os.getenv("ACCESS_KEY")
+
         return cls(secret, access, region)
 
     def __init__(self, secret, access, region):
@@ -111,7 +111,7 @@ class S3Buckets:
         Deletes a file from an S3 bucket in the user's AWS account.
 
         :param bucket_name: Name of the bucket to access the file
-        :param object_name: Name of the file to delete from the S3 bucket
+        :param file_name: Name of the file to delete from the S3 bucket
 
         :return: None
         """

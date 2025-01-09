@@ -3,7 +3,7 @@ from io import StringIO
 
 import pandas as pd
 
-from aws_s3 import S3Buckets
+from src.aws.s3 import S3Buckets
 
 s3_conn = S3Buckets.credentials('us-east-2')
 final_df = pd.DataFrame()

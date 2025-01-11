@@ -4,7 +4,7 @@ from io import StringIO
 
 import pandas as pd
 
-from src.aws.s3 import S3Buckets
+from aws.s3 import S3Buckets
 
 # Create a custom logger
 logger = logging.getLogger(__name__)

@@ -1,12 +1,8 @@
 import os
-from io import StringIO
 from dotenv import load_dotenv
 import logging
 import boto3
-from botocore.exceptions import ClientError
 
-# Create Logger
-logger = logging.getLogger(__name__)
 
 class S3Buckets:
     @classmethod
@@ -40,11 +36,18 @@ class S3Buckets:
         :param region: Specified AWS region during instantiation (default is None)
         """
         if region is None:
-            self.client = boto3.client('s3', aws_access_key_id=access, aws_secret_access_key=secret)
+            self.client = boto3.client(
+                "s3", aws_access_key_id=access, aws_secret_access_key=secret
+            )
             print(secret, access, region)
         else:
-            self.location = {'LocationConstraint': region}
-            self.client = boto3.client('s3', aws_access_key_id=access, aws_secret_access_key=secret, region_name=region)
+            self.location = {"LocationConstraint": region}
+            self.client = boto3.client(
+                "s3",
+                aws_access_key_id=access,
+                aws_secret_access_key=secret,
+                region_name=region,
+            )
 
     def list_buckets(self):
         """
@@ -72,74 +75,15 @@ class S3Buckets:
             pass
         else:
             print("A new bucket will be created in your AWS account")
-            self.client.create_bucket(Bucket=bucket_name, CreateBucketConfiguration=self.location)
+            self.client.create_bucket(
+                Bucket=bucket_name, CreateBucketConfiguration=self.location
+            )
             print(f"The bucket {bucket_name} has been successfully created")
 
-    def upload_file(self, file_name, bucket_name, object_name=None):
-        """
-        Uploads a file to an S3 bucket in the user's AWS account.
-
-        :param file_name: Name of the file to upload to the S3 bucket
-        :param bucket_name: Name of the bucket to upload the file to
-        :param object_name: S3 object name. If not specified, the file_name is used
-        :return: True if the file was uploaded successfully, else False
-        """
-        if object_name is None:
-            object_name = os.path.basename(file_name)
+    def put_file_in_s3(self, bucket_name, filename, file, folder=""):
         try:
-            self.client.upload_file(file_name, bucket_name, object_name)
-
-        except ClientError as e:
-            logging.error(e)
-            return False
-        return True
-
-    def download_file(self, bucket_name, object_name, file_name):
-        """
-        Downloads a file from an S3 bucket in the user's AWS account.
-
-        :param bucket_name: Name of the bucket to download the file from
-        :param object_name: Name of the file to download from the S3 bucket
-        :param file_name: Name of the file to save the downloaded content to
-        :return: None
-        """
-        file = self.client.download_file(bucket_name, object_name, file_name)
-        return file
-
-    def delete_file(self, bucket_name, file_name):
-        """
-        Deletes a file from an S3 bucket in the user's AWS account.
-
-        :param bucket_name: Name of the bucket to access the file
-        :param file_name: Name of the file to delete from the S3 bucket
-
-        :return: None
-        """
-        self.client.delete_object(Bucket=bucket_name, Key=file_name)
-        return f"The file {file_name} has been deleted from the bucket {bucket_name}"
-
-    def read_file(self, bucket_name, object_name):
-        """
-        Reads a file from an S3 bucket in the user's AWS account and returns its contents.
-
-        :param bucket_name: Name of the bucket to read the file from
-        :param object_name: Name of the file to read from the S3 bucket
-        :return: An object containing the file's contents
-        """
-        response = self.client.get_object(Bucket=bucket_name, Key=object_name)
-        file = StringIO(response['Body'].read().decode('utf-8'))
-        return file
-
-    def upload_dataframe_to_s3(self, df, bucket_name, object_name):
-        """
-        Uploads a pandas DataFrame to an S3 bucket in the user's AWS account as a CSV file.
-
-        :param df: DataFrame to upload to the S3 bucket
-        :param bucket_name: Name of the bucket to upload the DataFrame to
-        :param object_name: Name the DataFrame will take in the user's S3 bucket
-        :return: None
-        """
-        csv_buffer = StringIO()
-        df.to_csv(csv_buffer, header=True, index=False)
-        self.client.put_object(Bucket=bucket_name, Body=csv_buffer.getvalue(), Key=object_name)
-        print("Dataframe is saved as CSV in S3 bucket.")
+            self.client.put_object(
+                Bucket=bucket_name, Key=f"{folder}{filename}", Body=file.getvalue()
+            )
+        except Exception as e:
+            logging.error(f"Error uploading file to S3: {str(e)}")

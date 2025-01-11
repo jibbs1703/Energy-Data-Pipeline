@@ -4,7 +4,7 @@ from io import StringIO
 
 import pandas as pd
 
-from aws.s3 import S3Buckets
+from src.aws.s3 import S3Buckets
 
 # Create a custom logger
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ def get_url(
 ):
 
     if provinces is None:
-        provinces = ["NSW"]  # ["NSW", "QLD", "VIC", "SA", "TAS"]
+        provinces = ["QLD"]  # ["NSW", "QLD", "VIC", "SA", "TAS"]
     for province in provinces:
         for year in years:
             for month in months:
@@ -55,14 +55,16 @@ def get_data(url):
 
     if response.status_code == 200:
         data = StringIO(response.text)
-        dataframe = pd.read_csv(data)
+        data = pd.read_csv(data)
+        csv_file = StringIO()
+        data.to_csv(csv_file, index=False)
 
-        return dataframe, name
+        return csv_file, name
 
 
-def write_to_s3(df, bucket_name, file_name, folder=""):
-    s3_conn.upload_dataframe_to_s3(
-        df=df, bucket_name=bucket_name, object_name=f"{folder}{filename}"
+def write_to_s3(bucket_name, filename, file, folder=""):
+    s3_conn.put_file_in_s3(
+        bucket_name=bucket_name, filename=filename, file=file, folder=folder
     )
 
 
@@ -70,19 +72,17 @@ if __name__ == "__main__":
     gen = get_url()
     while True:
         try:
-            df, filename = get_data(next(gen))
+            file, filename = get_data(next(gen))
             write_to_s3(
-                df=df,
                 bucket_name="jibbs-machine-learning-bucket",
+                filename=filename,
+                file=file,
                 folder="AEMO_Price_Demand/",
-                file_name=filename,
             )
             logger.info(f"Data fetched: {filename}")
-
         except StopIteration:
             logger.info("All generated links have been yielded.")
             break
-
         # Exit the loop if StopIteration is raised
         except Exception as e:
             logger.error(f"An error occurred: {e}")

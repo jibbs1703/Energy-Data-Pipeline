@@ -37,13 +37,17 @@ jobs:
         black src
         black tests
 
-    - name: Lint with flake8
+    - name: Lint with flake8/ruff
       run: |
         echo "Linting Repository Scripts....."
 
-    - name: Run ETL file
+    - name: Run Async ETL file
       run: |
-        python src/etl.py
+        python src/async_etl.py
+
+    - name: Run Sync ETL file
+      run: |
+        python src/sync_etl.py
 
     - name: Test with pytest
       run: |

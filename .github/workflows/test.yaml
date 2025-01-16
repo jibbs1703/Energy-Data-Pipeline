@@ -37,9 +37,17 @@ jobs:
         black src
         black tests
 
-    - name: Lint with flake8/ruff
+    - name: Format SQL Scripts with sqlfluff
       run: |
-        echo "Linting Repository Scripts....."
+        echo "sqlfluff fix ."
+
+    - name: Lint SQL Scripts with sqlfluff
+      run: |
+        echo "sqlfluff lint ."
+
+    - name: Lint Python scripts with Ruff
+      run: |
+        python -m ruff check src/ tests/ 
 
     - name: Run Async ETL file
       run: |
@@ -51,4 +59,4 @@ jobs:
 
     - name: Test with pytest
       run: |
-        echo "Starting tests..."
+        pytest tests/

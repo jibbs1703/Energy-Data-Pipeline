@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 import logging
 import boto3
+from botocore.exceptions import ClientError
 
 
 class S3Buckets:
@@ -39,7 +40,6 @@ class S3Buckets:
             self.client = boto3.client(
                 "s3", aws_access_key_id=access, aws_secret_access_key=secret
             )
-            print(secret, access, region)
         else:
             self.location = {"LocationConstraint": region}
             self.client = boto3.client(
@@ -80,10 +80,61 @@ class S3Buckets:
             )
             print(f"The bucket {bucket_name} has been successfully created")
 
-    def put_file_in_s3(self, bucket_name, filename, file, folder=""):
+    def list_files(self, bucket_name, folder=""):
+        """
+        Lists files in an S3 bucket.
+        Parameters:
+        - bucket_name (str): The name of the S3 bucket.
+        - folder (str, optional): The folder path within the S3 bucket. Default is an empty string.
+
+        Returns: list: A list of filenames in the specified S3 bucket and folder.
+
+        Logs:
+        - Info: On successfully retrieving the list of files.
+        - Error: If there's an error during the list retrieval."""
+
+        try:
+            response = self.client.list_objects_v2(Bucket=bucket_name, Prefix=folder)
+            if "Contents" in response:
+                files = [item["Key"] for item in response["Contents"]]
+                logging.info(
+                    f"Files retrieved successfully from {bucket_name}/{folder}"
+                )
+                return files
+            else:
+                logging.info(f"No files found in {bucket_name}/{folder}")
+                return []
+        except ClientError as e:
+            logging.error(f"Error retrieving file list from S3: {str(e)}")
+            return []
+        except Exception as e:
+            logging.error(f"An unexpected error occurred: {str(e)}")
+            return []
+
+    def upload_file(self, bucket_name, filename, file, folder=""):
+        """
+        Uploads a file to an S3 bucket.
+        Parameters:
+        - bucket_name (str): The name of the target S3 bucket.
+        - filename (str): The name of the file to be uploaded.
+        - file (io.BytesIO): The file object to be uploaded.
+        - folder (str, optional): The folder path within the S3 bucket. Default is an empty string.
+
+        Returns: None
+
+        Logs:
+        - Info: On successful upload of the file.
+        - Error: If there's an error during upload.
+        - Error: If an unexpected error occurs.
+        """
         try:
             self.client.put_object(
                 Bucket=bucket_name, Key=f"{folder}{filename}", Body=file.getvalue()
             )
+            logging.info(
+                f"File {filename} uploaded successfully to {bucket_name}/{folder}"
+            )
+        except ClientError as e:
+            logging.error(f"Error uploading file to S3: {str(e)}")
         except Exception as e:
             logging.error(f"Error uploading file to S3: {str(e)}")

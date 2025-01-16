@@ -62,7 +62,7 @@ async def get_data(url, session):
 
 
 def write_to_s3(bucket_name, filename, file, folder=""):
-    s3_conn.put_file_in_s3(
+    s3_conn.upload_file(
         bucket_name=bucket_name, filename=filename, file=file, folder=folder
     )
 

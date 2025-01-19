@@ -58,6 +58,7 @@ class S3Buckets:
         response = self.client.list_buckets()
         buckets = response["Buckets"]
         all_buckets = [bucket["Name"] for bucket in buckets]
+        logging.info(f"This account contains the following buckets: {all_buckets}")
         return all_buckets
 
     def create_bucket(self, bucket_name):
@@ -69,16 +70,18 @@ class S3Buckets:
         the bucket is created in the default S3 region (us-east-1).
 
         :param bucket_name: Name of the bucket to be created
+
+        Returns: None
         """
         if bucket_name in self.list_buckets():
-            print(f"The bucket {bucket_name} already exists")
+            logging.info(f"The bucket {bucket_name} already exists")
             pass
         else:
-            print("A new bucket will be created in your AWS account")
+            logging.info("A new bucket will be created in your AWS account")
             self.client.create_bucket(
                 Bucket=bucket_name, CreateBucketConfiguration=self.location
             )
-            print(f"The bucket {bucket_name} has been successfully created")
+            logging.info(f"The bucket {bucket_name} has been successfully created")
 
     def list_files(self, bucket_name, folder=""):
         """

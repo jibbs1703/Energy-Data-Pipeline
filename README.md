@@ -6,6 +6,8 @@ This repository contains an ETL pipeline that fetches monthly electricity price 
 
 In addition to data engineering tasks, the project incorporates a machine learning model that predicts energy demand for the upcoming month. A dashboard is also implemented to present the data, allowing users to browse demand and pricing trends by region.
 
+![Energy Data Pipeline](docs/assets/energy-data-pipeline.svg)
+
 ## Project Components
 
 - **Data Extraction**: The `get_url` function generates URLs for the desired data files based on specified parameters such as year, month, and province. The `get_data` function asynchronously fetches the data from these URLs and returns the data in CSV format.

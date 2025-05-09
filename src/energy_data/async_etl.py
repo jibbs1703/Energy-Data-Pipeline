@@ -1,29 +1,14 @@
-import logging
+import argparse
+import datetime
 import aiohttp
 import asyncio
 from io import StringIO
-import pandas as pd
 from aws.s3 import S3Buckets
 
-# Create a custom logger
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+import pandas as pd
+from logs import get_logger
 
-# Create handlers
-console_handler = logging.StreamHandler()
-
-# Set the level for handlers
-console_handler.setLevel(logging.INFO)
-
-# Create formatters and add them to handlers
-console_format = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-console_handler.setFormatter(console_format)
-
-# Add handlers to the logger
-logger.addHandler(console_handler)
-
+logger = get_logger(__name__)
 s3_conn = S3Buckets.credentials("us-east-2")
 final_df = pd.DataFrame()
 
@@ -91,4 +76,28 @@ async def main():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="ETL arguments.")
+    parser.add_argument(
+        "--current_year",
+        type=int,
+        nargs="+",
+        default=datetime.datetime.now().year,
+        help="Current year.",
+    )
+    parser.add_argument(
+        "--months",
+        type=int,
+        nargs="+",
+        default=list(range(1, 13)),
+        help="Months to fetch data for.",
+    )
+    parser.add_argument(
+        "--provinces",
+        type=str,
+        nargs="+",
+        default=["QLD", "NSW", "QLD", "VIC", "SA", "TAS"],
+        help="Provinces to fetch data for.",
+    )
+    args = parser.parse_args()
+    logger.info(f"Fetching data for years: {args.current_year}, months: {args.months}, provinces: {args.provinces}")
     asyncio.run(main())

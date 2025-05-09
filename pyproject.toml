@@ -5,14 +5,9 @@ description = "A Python package for managing and an energy data pipeline"
 keywords = ["Energy Data Pipeline", "S3", "Redshift", "EC2", "AWS", "Data Engineering"]
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
 
-authors = [
-    {name = "Abraham Ajibade", email = "abraham0ajibade@gmail.com"}
-]
-maintainers = [
-  {name = "Abraham Ajibade", email = "abraham0ajibade@gmail.com"}
-]
+authors = [{name = "Abraham Ajibade", email = "abraham0ajibade@gmail.com"}]
+maintainers = [{name = "Abraham Ajibade", email = "abraham0ajibade@gmail.com"}]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
   "Intended Audience :: Developers",

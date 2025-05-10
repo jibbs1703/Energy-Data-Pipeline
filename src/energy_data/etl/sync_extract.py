@@ -110,23 +110,22 @@ def run_data_extraction(
     """
     gen = get_url(base_url, current_year, months, provinces)
     for _ in gen:
-        print(_)
-        # try:
-        #     file, filename = get_data(next(gen))
-        #     if file.getvalue() == "":
-        #         logger.error(f"Data not available: {filename}. Skipping upload.")
-        #         continue
-        #     write_to_s3(
-        #         bucket_name=bucket_name,
-        #         filename=filename,
-        #         file=file,
-        #         folder=folder,
-        #     )
-        # except StopIteration:
-        #     logger.info("All generated links have been yielded.")
-        #     break
-        # except (requests.RequestException, pd.errors.ParserError, s3_conn.S3UploadError) as e:
-        #     logger.error(f"An error occurred: {e}")
+        try:
+            file, filename = get_data(next(gen))
+            if file.getvalue() == "":
+                logger.error(f"Data not available: {filename}. Skipping upload.")
+                continue
+            write_to_s3(
+                bucket_name=bucket_name,
+                filename=filename,
+                file=file,
+                folder=folder,
+            )
+        except StopIteration:
+            logger.info("All generated links have been yielded.")
+            break
+        except (requests.RequestException, pd.errors.ParserError, s3_conn.S3UploadError) as e:
+            logger.error(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":

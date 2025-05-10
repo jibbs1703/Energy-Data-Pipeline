@@ -1,0 +1,51 @@
+[project]
+name = "energy_data"
+version = "1.0.0"
+description = "A Python package for managing and an energy data pipeline"
+keywords = ["Energy Data Pipeline", "S3", "Redshift", "EC2", "AWS", "Data Engineering"]
+readme = "README.md"
+requires-python = ">=3.10"
+
+authors = [{name = "Abraham Ajibade", email = "abraham0ajibade@gmail.com"}]
+maintainers = [{name = "Abraham Ajibade", email = "abraham0ajibade@gmail.com"}]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+dependencies = [
+    "aiohttp>=3.11.10",
+    "boto3>=1.35.57",
+    "pandas>=2.2.1",
+    "python-dotenv>=1.0.1",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>= 8.3.4",
+    "ruff>=0.9.4",
+]
+
+[build-system]
+requires = ["setuptools", "build"]
+build-backend = "setuptools.build_meta"
+
+[tool.setup.packages.find]
+where = "src"
+
+[tool.pytest.ini-options]
+markers = [
+    "unit: mark a test as a unit test",
+    "integration: marks tests as integration tests"
+]
+testpaths = "tests"
+
+
+[project.urls]
+"Homepage" = "https://github.com/jibbs1703/Energy-Data-Pipeline"

@@ -8,12 +8,9 @@ on:
   pull_request:
     branches:
       - "main"
-  schedule:
-    - cron: "0 0 * * *" # Every day at midnight UTC"
   
 jobs:
   tests:
     name: Run Test
     uses: ./.github/workflows/test-lint.yaml
     secrets: inherit
-    if: github.ref == 'refs/heads/main'

@@ -1,23 +1,25 @@
 """Energy Data Extraction and Load Sync Module."""
+
 import argparse
 import datetime
-import requests
+from collections.abc import Generator
 from io import StringIO
-from typing import Generator
 
 import pandas as pd
-
-from logs import get_logger
+import requests
 from aws.s3 import S3Buckets
+from logs import get_logger
 
 logger = get_logger(__name__)
 s3_conn = S3Buckets.credentials("us-east-2")
 
+
 def get_url(
     base_url: str,
     current_year: int,
-    months: range = range(1, 13),
-    provinces: list| None =None,) -> Generator[str]:
+    months: range,
+    provinces: list[str],
+) -> Generator[str]:
     """
     Generates URLs for the specified base URL, year, months, and provinces.
     Args:
@@ -40,17 +42,20 @@ def get_data(url: str) -> tuple[StringIO, str]:
     Fetches data from the given URL and returns it as a StringIO object.
     The data is read as a CSV file and then converted to a StringIO object.
     If the request fails, it returns an empty StringIO object and the name of the file.
-    If the request is successful, it returns the StringIO object with the data and the name of the file.
-    The name of the file is extracted from the URL.
+    If the request is successful, it returns the StringIO object with the data and the
+    name of the file. The name of the file is extracted from the URL.
     Args:
         url (str): The URL to fetch data from.
     Returns:
         tuple: A tuple containing the StringIO object with the data and the name of the file.
     """
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        )
     }
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=10)
     name = url.split("/")[-1]
 
     if response.status_code == 200:
@@ -62,10 +67,11 @@ def get_data(url: str) -> tuple[StringIO, str]:
     else:
         return StringIO(""), name
 
+
 def write_to_s3(bucket_name, filename, file, folder="") -> None:
     """
-    Uploads a file to an S3 bucket. Checks if the file already exists in the bucket before uploading.
-    If the file already exists, it skips the upload.
+    Uploads a file to an S3 bucket. Checks if the file already exists in the bucket before
+    uploading. If the file already exists, it skips the upload.
     If the file does not exist, it uploads the file to the specified folder in the S3 bucket.
     Args:
         bucket_name (str): The name of the S3 bucket.
@@ -80,15 +86,16 @@ def write_to_s3(bucket_name, filename, file, folder="") -> None:
             return
         logger.info(f"Uploading '{filename}' to S3 bucket '{bucket_name}'...")
         s3_conn.upload_file(bucket_name=bucket_name, filename=filename, file=file, folder=folder)
-    except Exception as e:
+    except (s3_conn.S3UploadError, s3_conn.S3ConnectionError) as e:
         logger.error(f"Failed to upload '{filename}' to '{bucket_name}': {e}")
+
 
 def run_data_extraction(
     base_url: str,
     bucket_name: str,
     current_year: int,
     months: range,
-    provinces : list[str],
+    provinces: list[str],
     folder: str,
 ) -> None:
     """
@@ -102,45 +109,73 @@ def run_data_extraction(
         folder (str): The folder in the S3 bucket where the file will be uploaded.
     """
     gen = get_url(base_url, current_year, months, provinces)
-    for url in gen:
-        try:
-            file, filename = get_data(next(gen))
-            if file.getvalue() == "":
-                logger.error(f"Data not available: {filename}. Skipping upload.")
-                continue
-            write_to_s3(
-                bucket_name=bucket_name,
-                filename=filename,
-                file=file,
-                folder=folder,)
-        except StopIteration:
-            logger.info("All generated links have been yielded.")
-            break
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
+    for _ in gen:
+        print(_)
+        # try:
+        #     file, filename = get_data(next(gen))
+        #     if file.getvalue() == "":
+        #         logger.error(f"Data not available: {filename}. Skipping upload.")
+        #         continue
+        #     write_to_s3(
+        #         bucket_name=bucket_name,
+        #         filename=filename,
+        #         file=file,
+        #         folder=folder,
+        #     )
+        # except StopIteration:
+        #     logger.info("All generated links have been yielded.")
+        #     break
+        # except (requests.RequestException, pd.errors.ParserError, s3_conn.S3UploadError) as e:
+        #     logger.error(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Data Extraction Arguments.")
-    parser.add_argument("--base_url", type=str, help="Base URL for the data.",
-        default="https://www.aemo.com.au/aemo/data/nem/priceanddemand/PRICE_AND_DEMAND",)
-    parser.add_argument("--bucket_name", type=str,default="energy-data-bucket",
-        help="S3 bucket name.",)
-    parser.add_argument("--current_year", type=int, nargs="+",
-        default=datetime.datetime.now().year, help="Current year.",)
-    parser.add_argument("--folder", type=str, default="Energy_Price_Demand/",
-        help="Folder to upload data to in AWS S3.",)
-    parser.add_argument("--months", type=int, nargs="+",
-        default=list(range(1, 13)), help="Months to fetch data for.",)
-    parser.add_argument("--provinces", type=str, help="Provinces to fetch data for.",
-        nargs="+",default=["QLD", "NSW", "VIC", "SA", "TAS"],)
+    parser.add_argument(
+        "--base_url",
+        type=str,
+        help="Base URL for the data.",
+        default="https://www.aemo.com.au/aemo/data/nem/priceanddemand/PRICE_AND_DEMAND",
+    )
+    parser.add_argument(
+        "--bucket_name",
+        type=str,
+        default="energy-data-bucket",
+        help="S3 bucket name.",
+    )
+    parser.add_argument(
+        "--current_year",
+        type=int,
+        default=datetime.datetime.now().year,
+        help="Current year.",
+    )
+    parser.add_argument(
+        "--folder",
+        type=str,
+        default="Energy_Price_Demand/",
+        help="Folder to upload data to in AWS S3.",
+    )
+    parser.add_argument(
+        "--months",
+        type=int,
+        nargs="+",
+        default=list(range(1, 13)),
+        help="Months to fetch data for.",
+    )
+    parser.add_argument(
+        "--provinces",
+        type=str,
+        help="Provinces to fetch data for.",
+        nargs="+",
+        default=["QLD", "NSW", "VIC", "SA", "TAS"],
+    )
     args = parser.parse_args()
     logger.info(f"Arguments: {args}")
     logger.info("Starting data extraction and upload process...")
     run_data_extraction(
         base_url=args.base_url,
         bucket_name=args.bucket_name,
-        current_year=args.current_year[0],
+        current_year=args.current_year,
         months=args.months,
         provinces=args.provinces,
         folder=args.folder,

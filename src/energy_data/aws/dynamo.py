@@ -1,1 +1,1 @@
-""" Module for Connecting to AWS DynamoDB"""
+"""Module for Connecting to AWS DynamoDB"""

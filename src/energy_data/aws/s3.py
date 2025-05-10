@@ -1,8 +1,9 @@
-import os
-from dotenv import load_dotenv
 import logging
+import os
+
 import boto3
 from botocore.exceptions import ClientError
+from dotenv import load_dotenv
 
 
 class S3Buckets:
@@ -11,12 +12,15 @@ class S3Buckets:
         """
         Retrieves AWS credentials from a hidden environment file.
 
-        This class method accesses the user's AWS secret and access keys stored in an environment file.
-        If a region is specified, the methods within the S3Buckets class will execute in that region.
+        This class method accesses the user's AWS secret and access keys stored
+        in an environment file.
+        If a region is specified, the methods within the S3Buckets class will 
+        execute in that region.
         Otherwise, AWS will assign a default region.
 
         :param region: AWS region specified by the user (default is None)
-        :return: An instance of the S3Buckets class initialized with the user's credentials and specified region
+        :return: An instance of the S3Buckets class initialized with the user's
+        credentials and specified region
         """
         load_dotenv()
         secret = os.getenv("ACCESS_SECRET")
@@ -28,8 +32,10 @@ class S3Buckets:
         """
         Initializes the S3Buckets class with user credentials and creates the AWS S3 client.
 
-        This constructor method initializes the S3Buckets class using the provided secret and access keys.
-        It creates an AWS S3 client using the boto3 library. If no region is specified, AWS assigns a default
+        This constructor method initializes the S3Buckets class using the provided secret 
+        and access keys.
+        It creates an AWS S3 client using the boto3 library. If no region is specified, 
+        AWS assigns a default
         region. The created client is available for subsequent methods within the class.
 
         :param secret: User's AWS secret key loaded from the environment file
@@ -37,9 +43,7 @@ class S3Buckets:
         :param region: Specified AWS region during instantiation (default is None)
         """
         if region is None:
-            self.client = boto3.client(
-                "s3", aws_access_key_id=access, aws_secret_access_key=secret
-            )
+            self.client = boto3.client("s3", aws_access_key_id=access, aws_secret_access_key=secret)
         else:
             self.location = {"LocationConstraint": region}
             self.client = boto3.client(
@@ -65,8 +69,10 @@ class S3Buckets:
         """
         Creates an S3 bucket in the user's AWS account.
 
-        This method creates a new S3 bucket in the region specified during the instantiation of the class.
-        If the bucket name has already been used, it will not create a new bucket. If no region is specified,
+        This method creates a new S3 bucket in the region specified during the
+        instantiation of the class.
+        If the bucket name has already been used, it will not create a new bucket.
+        If no region is specified,
         the bucket is created in the default S3 region (us-east-1).
 
         :param bucket_name: Name of the bucket to be created
@@ -78,9 +84,8 @@ class S3Buckets:
             pass
         else:
             logging.info("A new bucket will be created in your AWS account")
-            self.client.create_bucket(
-                Bucket=bucket_name, CreateBucketConfiguration=self.location
-            )
+            self.client.create_bucket(Bucket=bucket_name,
+            CreateBucketConfiguration=self.location)
             logging.info(f"The bucket {bucket_name} has been successfully created")
 
     def list_files(self, bucket_name, folder=""):
@@ -100,9 +105,7 @@ class S3Buckets:
             response = self.client.list_objects_v2(Bucket=bucket_name, Prefix=folder)
             if "Contents" in response:
                 files = [item["Key"] for item in response["Contents"]]
-                logging.info(
-                    f"Files retrieved successfully from {bucket_name}/{folder}"
-                )
+                logging.info(f"Files retrieved successfully from {bucket_name}/{folder}")
                 return files
             else:
                 logging.info(f"No files found in {bucket_name}/{folder}")
@@ -110,8 +113,11 @@ class S3Buckets:
         except ClientError as e:
             logging.error(f"Error retrieving file list from S3: {str(e)}")
             return []
-        except Exception as e:
-            logging.error(f"An unexpected error occurred: {str(e)}")
+        except KeyError as e:
+            logging.error(f"KeyError occurred: {str(e)}")
+            return []
+        except TypeError as e:
+            logging.error(f"TypeError occurred: {str(e)}")
             return []
 
     def upload_file(self, bucket_name, filename, file, folder=""):
@@ -134,10 +140,12 @@ class S3Buckets:
             self.client.put_object(
                 Bucket=bucket_name, Key=f"{folder}{filename}", Body=file.getvalue()
             )
-            logging.info(
-                f"File {filename} uploaded successfully to {bucket_name}/{folder}"
-            )
+            logging.info(f"File {filename} uploaded successfully to {bucket_name}/{folder}")
         except ClientError as e:
             logging.error(f"Error uploading file to S3: {str(e)}")
-        except Exception as e:
-            logging.error(f"Error uploading file to S3: {str(e)}")
+        except OSError as e:
+            logging.error(f"OS error occurred while uploading file to S3: {str(e)}")
+        except ValueError as e:
+            logging.error(f"Value error occurred while uploading file to S3: {str(e)}")
+        except boto3.exceptions.S3UploadFailedError as e:
+            logging.error(f"S3 upload failed: {str(e)}")

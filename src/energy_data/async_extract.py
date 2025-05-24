@@ -7,8 +7,8 @@ from io import StringIO
 
 import aiohttp
 import pandas as pd
-from aws.s3 import S3Buckets
 from logs import get_logger
+from s3 import S3Buckets
 
 logger = get_logger(__name__)
 s3_conn = S3Buckets.credentials("us-east-2")

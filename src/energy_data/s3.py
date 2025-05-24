@@ -1,3 +1,4 @@
+"""AWS S3 Connection Module"""
 import logging
 import os
 

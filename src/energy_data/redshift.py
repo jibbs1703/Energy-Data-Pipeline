@@ -1,1 +1,1 @@
-"""Module for Connecting to AWS RedShift"""
+"""AWS RedShift Connction Module"""

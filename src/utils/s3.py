@@ -1,4 +1,5 @@
 """AWS S3 Connection Module"""
+
 import logging
 import os
 
@@ -15,7 +16,7 @@ class S3Buckets:
 
         This class method accesses the user's AWS secret and access keys stored
         in an environment file.
-        If a region is specified, the methods within the S3Buckets class will 
+        If a region is specified, the methods within the S3Buckets class will
         execute in that region.
         Otherwise, AWS will assign a default region.
 
@@ -33,9 +34,9 @@ class S3Buckets:
         """
         Initializes the S3Buckets class with user credentials and creates the AWS S3 client.
 
-        This constructor method initializes the S3Buckets class using the provided secret 
+        This constructor method initializes the S3Buckets class using the provided secret
         and access keys.
-        It creates an AWS S3 client using the boto3 library. If no region is specified, 
+        It creates an AWS S3 client using the boto3 library. If no region is specified,
         AWS assigns a default
         region. The created client is available for subsequent methods within the class.
 
@@ -85,8 +86,7 @@ class S3Buckets:
             pass
         else:
             logging.info("A new bucket will be created in your AWS account")
-            self.client.create_bucket(Bucket=bucket_name,
-            CreateBucketConfiguration=self.location)
+            self.client.create_bucket(Bucket=bucket_name, CreateBucketConfiguration=self.location)
             logging.info(f"The bucket {bucket_name} has been successfully created")
 
     def list_files(self, bucket_name, folder=""):

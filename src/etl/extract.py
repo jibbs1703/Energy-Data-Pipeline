@@ -1,27 +1,29 @@
-"""Energy Data Extraction and Load Sync Module."""
+"""Energy Data Extraction and Load Async Module."""
 
 import argparse
+import asyncio
 import datetime
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from io import StringIO
 
+import aiohttp
 import pandas as pd
-import requests
-from logs import get_logger
-from s3 import S3Buckets
+
+from src.utils.logs import get_logger
+from src.utils.s3 import S3Buckets
 
 logger = get_logger(__name__)
 s3_conn = S3Buckets.credentials("us-east-2")
 
 
-def get_url(
+async def get_url(
     base_url: str,
     current_year: int,
     months: range,
     provinces: list[str],
-) -> Generator[str]:
+) -> AsyncGenerator[str, None]:
     """
-    Generates URLs for the specified base URL, year, months, and provinces.
+    Asynchronously generates URLs for the specified base URL, year, months, and provinces.
     Args:
         base_url (str): The base URL for the data.
         current_year (int): The current year.
@@ -37,13 +39,14 @@ def get_url(
                 yield url
 
 
-def get_data(url: str) -> tuple[StringIO, str]:
+async def get_data(url: str) -> tuple[StringIO, str]:
     """
-    Fetches data from the given URL and returns it as a StringIO object.
+    Asynchronously fetches data from the given URL and returns it as a StringIO object.
     The data is read as a CSV file and then converted to a StringIO object.
     If the request fails, it returns an empty StringIO object and the name of the file.
-    If the request is successful, it returns the StringIO object with the data and the
-    name of the file. The name of the file is extracted from the URL.
+    If the request is successful, it returns the StringIO object with the data and the name
+    of the file.
+    The name of the file is extracted from the URL.
     Args:
         url (str): The URL to fetch data from.
     Returns:
@@ -55,23 +58,33 @@ def get_data(url: str) -> tuple[StringIO, str]:
             "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         )
     }
-    response = requests.get(url, headers=headers, timeout=10)
     name = url.split("/")[-1]
-
-    if response.status_code == 200:
-        data = StringIO(response.text)
-        data = pd.read_csv(data)
-        csv_file = StringIO()
-        data.to_csv(csv_file, index=False)
-        return csv_file, name
-    else:
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as response:
+                if response.status == 200:
+                    text = await response.text()
+                    data = StringIO(text)
+                    df = pd.read_csv(data)
+                    csv_file = StringIO()
+                    df.to_csv(csv_file, index=False)
+                    return csv_file, name
+                else:
+                    logger.error(f"Failed to fetch data from {url}. Status code: {response.status}")
+                    return StringIO(""), name
+    except aiohttp.ClientError as e:
+        logger.error(f"AIOHTTP error fetching {url}: {e}")
+        return StringIO(""), name
+    except pd.errors.ParserError as e:
+        logger.error(f"An error occurred while parsing data from {url}: {e}")
         return StringIO(""), name
 
 
-def write_to_s3(bucket_name, filename, file, folder="") -> None:
+async def write_to_s3(bucket_name, filename, file, folder="") -> None:
     """
-    Uploads a file to an S3 bucket. Checks if the file already exists in the bucket before
-    uploading. If the file already exists, it skips the upload.
+    Asynchronously uploads a file to an S3 bucket. Checks if the file already exists
+    in the bucket before uploading.
+    If the file already exists, it skips the upload.
     If the file does not exist, it uploads the file to the specified folder in the S3 bucket.
     Args:
         bucket_name (str): The name of the S3 bucket.
@@ -90,7 +103,27 @@ def write_to_s3(bucket_name, filename, file, folder="") -> None:
         logger.error(f"Failed to upload '{filename}' to '{bucket_name}': {e}")
 
 
-def run_data_extraction(
+async def process_url(url: str, bucket_name: str, folder: str) -> None:
+    """
+    Asynchronously fetches data from a URL and uploads it to S3.
+    Args:
+        url (str): The URL to fetch data from.
+        bucket_name (str): The name of the S3 bucket.
+        folder (str): The folder in the S3 bucket where the file will be uploaded.
+    """
+    file, filename = await get_data(url)
+    if file.getvalue() == "":
+        logger.error(f"Data not available: {filename}. Skipping upload.")
+        return
+    await write_to_s3(
+        bucket_name=bucket_name,
+        filename=filename,
+        file=file,
+        folder=folder,
+    )
+
+
+async def run_data_extraction(
     base_url: str,
     bucket_name: str,
     current_year: int,
@@ -99,7 +132,7 @@ def run_data_extraction(
     folder: str,
 ) -> None:
     """
-    Main function to run the data extraction and upload process.
+    Main asynchronous function to run the data extraction and upload process.
     Args:
         base_url (str): The base URL for the data.
         bucket_name (str): The name of the S3 bucket.
@@ -108,24 +141,9 @@ def run_data_extraction(
         provinces (list): The list of provinces to generate URLs for.
         folder (str): The folder in the S3 bucket where the file will be uploaded.
     """
-    gen = get_url(base_url, current_year, months, provinces)
-    for _ in gen:
-        try:
-            file, filename = get_data(next(gen))
-            if file.getvalue() == "":
-                logger.error(f"Data not available: {filename}. Skipping upload.")
-                continue
-            write_to_s3(
-                bucket_name=bucket_name,
-                filename=filename,
-                file=file,
-                folder=folder,
-            )
-        except StopIteration:
-            logger.info("All generated links have been yielded.")
-            break
-        except (requests.RequestException, pd.errors.ParserError, s3_conn.S3UploadError) as e:
-            logger.error(f"An error occurred: {e}")
+    async for url in get_url(base_url, current_year, months, provinces):
+        await process_url(url, bucket_name, folder)
+    logger.info("All generated links have been processed.")
 
 
 if __name__ == "__main__":
@@ -171,12 +189,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
     logger.info(f"Arguments: {args}")
     logger.info("Starting data extraction and upload process...")
-    run_data_extraction(
-        base_url=args.base_url,
-        bucket_name=args.bucket_name,
-        current_year=args.current_year,
-        months=args.months,
-        provinces=args.provinces,
-        folder=args.folder,
+    asyncio.run(
+        run_data_extraction(
+            base_url=args.base_url,
+            bucket_name=args.bucket_name,
+            current_year=args.current_year,
+            months=args.months,
+            provinces=args.provinces,
+            folder=args.folder,
+        )
     )
-    logger.info("Data extraction and upload to AWS S3 completed.")
+    logger.info("data extraction and upload to AWS S3 completed.")

@@ -21,10 +21,3 @@ In addition to data engineering tasks, the project incorporates a machine learni
 - **Machine Learning Model**: A predictive model analyzes historical energy demand and price data, generating forecasts for the upcoming month based on identified patterns.
 
 - **Data Dashboard**: An interactive dashboard presents energy demand and pricing data, enabling users to browse trends by region and gain valuable insights into market fluctuations.
-
-## Project Dependencies
-
-To install the required dependencies, run:
-
-```sh
-pip install -r requirements.txt

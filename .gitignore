@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# Implementation-specific files
+IMPLEMENTATION_PLAN.md
+
 # Distribution / packaging
 .Python
 build/
